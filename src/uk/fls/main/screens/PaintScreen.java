@@ -44,6 +44,7 @@ public class PaintScreen extends Screen {
 	private Tool[] tools;
 	private Tool currentTool;
 	private SpriteParser sp;
+	private int numTools;
 	
 	public void postInit(){
 		this.r = new Renderer(this.game.getImage());
@@ -169,7 +170,7 @@ public class PaintScreen extends Screen {
 		int tpxm = 11 * 8;
 		int tpym = 2 * 8;
 		int tpxM = tpxm + (3 * 8);
-		int tpyM = tpym + (6 * 8);
+		int tpyM = tpym + (Math.max((this.numTools / 3),1) * 8);
 		if(mx > tpxm && my > tpym && mx < tpxM && my < tpyM){
 			int tsX = (mx - tpxm) / this.sheetSize;
 			int tsY = (my - tpym) / this.sheetSize;
@@ -519,7 +520,13 @@ public class PaintScreen extends Screen {
 		this.tools[1] = new Fill(this.sp);
 		this.tools[2] = new Pipette(this.sp);
 		
-		this.currentTool = this.tools[1];
+		this.currentTool = this.tools[0];
+		
+		int amt = 0;
+		for(int i = 0; i < this.tools.length; i++){
+			if(this.tools[i] != null)amt++;
+		}
+		this.numTools = amt;
 	}
 	
 	public void drawCursor(){

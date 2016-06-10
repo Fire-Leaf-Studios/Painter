@@ -18,7 +18,7 @@ public class Painter extends Init{
 	private static int h = (w / 4) * 3;
 	private static int s = 3;
 	public Painter(){
-		super("FLS Painter V0.7", w * s, h * s);
+		super("FLS Painter V0.8", w * s, h * s);
 		useCustomBufferedImage(w, h, false);
 		setInput(new Input(this, Input.MOUSE));
 		setScreen(new PaintScreen());
