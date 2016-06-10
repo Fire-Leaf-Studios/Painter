@@ -3,6 +3,7 @@ package uk.fls.main.screens;
 import java.awt.Graphics;
 import java.io.File;
 import java.io.FileWriter;
+import java.util.Date;
 
 import javax.swing.JFileChooser;
 
@@ -23,6 +24,7 @@ public class PaintScreen extends Screen {
 	private int cTile;
 	private Tile[] tiles;
 	private Pallet currentPallet;
+	private String font;
 	private int[][] letters;
 	private int[][] borderData;
 	private int[] cursorData;
@@ -31,6 +33,9 @@ public class PaintScreen extends Screen {
 	
 	private int windowScale;
 	private String documentTitle;
+	
+	private int currentVersion;
+	
 	public void postInit(){
 		this.r = new Renderer(this.game.getImage());
 		this.tiles = new Tile[this.sheetSize * this.sheetSize];
@@ -42,9 +47,10 @@ public class PaintScreen extends Screen {
 		this.currentColorIndex = 0;
 		this.windowScale = 3;
 		this.inputDelay = 10;
-		
-		this.letters = new int["ABCDEFGHUOJKLMNOPQRSTUVWXYZ0123456789,.!?:+-*= ".length()][];
+		this.font = "ABCDEFGHUOJKLMNOPQRSTUVWXYZ0123456789,.!?:+-*= ";
+		this.letters = new int[this.font.length()][];
 		this.documentTitle = "Untitled";
+		this.currentVersion = 2;
 		initChars();
 		initBorder();
 		initCursor();
@@ -103,7 +109,7 @@ public class PaintScreen extends Screen {
 		
 			//This section checks to see if the mouse is over the pallet area
 			int paxm = 8;
-			int paym = this.game.getHeight() / windowScale - 48;
+			int paym = this.game.getHeight() / windowScale - 48 + 8;
 			int paxM = paxm + (16 * 8);
 			int payM = paym + (Math.max((this.currentPallet.colors.length / 16), 1) * 8);
 			
@@ -123,7 +129,7 @@ public class PaintScreen extends Screen {
 			
 			//This section will check to see if the mouse is over the load and save buttons
 			int baxm = 128 + 24 + 8 - 16;
-			int baym = 104;
+			int baym = 104 + 8;
 			int baxM = baxm + 16 * 3;
 			int bayM = baym + (8 * 2) * 2;
 			
@@ -147,13 +153,15 @@ public class PaintScreen extends Screen {
 	public void render(Graphics g) {
 		this.r.fill(this.r.makeRGB(123, 164, 255));
 		
+
+		renderBorder(11, 2, 3, 6);
 		drawWholeSheet();
 		drawCurrent();
-		renderBorder(1,13,23,4);
+		renderBorder(1,14,23,4);
 		drawPallet();
 		drawButtons();
 		
-		renderString(this.documentTitle,8,64 + 8 * 3);
+		//renderString(this.documentTitle,8,64 + 8 * 3);
 		
 		drawCursor();
 		
@@ -218,7 +226,7 @@ public class PaintScreen extends Screen {
 	public void drawPallet(){
 		int s = 8;
 		int xoff = 8;
-		int yoff = 104;
+		int yoff = 104 + 8;
 		for(int i = 0; i < this.currentPallet.colors.length; i++){
 			int c = this.currentPallet.colors[i];
 			int tx = i % 16;
@@ -239,7 +247,7 @@ public class PaintScreen extends Screen {
 		int bh = 8 * 2;
 		String[] labels = new String[]{"save","load"};
 		int xoff = 128 + 24 + 8;
-		int yoff = 104;
+		int yoff = 104 + 8;
 		
 		for(int i = 0; i < 2; i++){
 			for(int j = 0; j < bw * bh; j++){
@@ -257,13 +265,20 @@ public class PaintScreen extends Screen {
 		int out = jfc.showSaveDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
+			
+			
+			
 			File file = jfc.getSelectedFile();
 			String output = "";
+			output += "?Version: " + this.currentVersion + "\n";		
+			
 			for(int i = 0; i < this.tiles.length; i++){
 				String thisTile = "#";
 				int[] data = this.tiles[i].getData();
+				int amt = 0;	
 				for(int j = 0; j < data.length; j++){
-					thisTile += data[j]+",";
+					int c = data[j];
+					thisTile += (c==-1?"-1":Integer.toHexString(c))+",";
 				}
 				thisTile = thisTile.trim();
 				output += thisTile + "\n";
@@ -271,9 +286,9 @@ public class PaintScreen extends Screen {
 
 			boolean noEnding = file.getName().indexOf(".")==-1;
 			String fileName = noEnding?file.getName()+".art":file.getName();
-			this.documentTitle = fileName;
-			System.out.println(file.getParentFile() + "\\" + fileName);
-			try(FileWriter fw = new FileWriter(file.getParentFile() + "\\" + fileName)) {
+			this.documentTitle = file.getName().indexOf(".")==-1?file.getName():file.getName().substring(0,file.getName().indexOf("."));
+			File newFile = new File((noEnding?file.getAbsolutePath()+".art":file.getAbsolutePath()));
+			try(FileWriter fw = new FileWriter(newFile)) {
 			    fw.write(output);
 			    fw.close();
 			}catch(Exception e){
@@ -301,6 +316,30 @@ public class PaintScreen extends Screen {
 				this.documentTitle = fileName;
 			}
 			String[] lines = FileIO.instance.loadFile(jfc.getSelectedFile().getAbsolutePath()).split("\n");
+			
+			boolean usingHex = false;
+			boolean usingCompresion = false;
+			
+			for(int i = 0; i < lines.length; i++){//Looking for meta data
+				String l = lines[i].trim();
+				if(l.trim().startsWith("?")){//Found data
+					String data = l.substring(1);
+					String name = data.substring(0, data.indexOf(":")).trim();
+					String value = data.substring(data.indexOf(":") + 1).trim();
+					System.out.println(name);
+					if(name.equals("Version")){
+						int ver = Integer.valueOf(value);
+						if(ver >= 2){
+							usingHex = true;
+						}
+						
+						if(ver >= 3){
+							usingCompresion = true;
+						}
+					}
+				}
+			}
+			
 			int cell = 0;
 			for(int i = 0; i < lines.length; i++){
 				String line = lines[i];
@@ -308,7 +347,14 @@ public class PaintScreen extends Screen {
 					String[] data = line.substring(1).split(",");
 					int[] frame = new int[this.sheetSize * this.sheetSize];
 					for(int j = 0; j < data.length; j++){
-						frame[j] = Integer.parseInt(data[j].trim());
+						String c = data[j].trim();
+						if(!usingHex){// Not HEX values
+							frame[j] = Integer.parseInt(c);
+						}else{
+							if(data[j].equals("-1")){
+								frame[j] = -1;
+							}else frame[j] = Integer.parseInt(c, 16);
+						}
 						
 
 						int dx = j % this.sheetSize;
@@ -324,10 +370,9 @@ public class PaintScreen extends Screen {
 	}
 	
 	public void renderString(String msg, int x,int y){
-		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.!?:+-*=";
 		msg = msg.toUpperCase();
 		for(int i = 0; i < msg.length(); i++){
-				int p = letters.indexOf(msg.charAt(i));
+				int p = this.font.indexOf(msg.charAt(i));
 				if(p == -1)continue;
 				for(int j = 0; j < 8 * 8; j++){
 					int dx = j % 8;
