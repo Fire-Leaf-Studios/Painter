@@ -22,7 +22,7 @@ public class SpriteParser {
 			String[] nd = l.trim().split(",");
 			int[] d = new int[s * s];
 			for(int j = 0; j < nd.length; j++){
-				d[j] = Integer.parseInt(nd[j]);
+				d[j] = CompressionManager.decompress(nd[j]);
 			}
 			this.data[i] = d;
 		}

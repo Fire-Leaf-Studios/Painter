@@ -3,16 +3,20 @@ package uk.fls.main.screens;
 import java.awt.Graphics;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.Date;
 
 import javax.swing.JFileChooser;
 
 import fls.engine.main.io.FileIO;
 import fls.engine.main.screen.Screen;
 import fls.engine.main.util.Renderer;
+import uk.fls.main.util.CompressionManager;
 import uk.fls.main.util.Pallet;
 import uk.fls.main.util.SpriteParser;
 import uk.fls.main.util.Tile;
+import uk.fls.main.util.tools.Fill;
+import uk.fls.main.util.tools.Pencil;
+import uk.fls.main.util.tools.Pipette;
+import uk.fls.main.util.tools.Tool;
 
 public class PaintScreen extends Screen {
 
@@ -21,20 +25,25 @@ public class PaintScreen extends Screen {
 	private int mx,my;
 	private int cx, cy;
 	private int sheetSize = 8;
-	private int cTile;
-	private Tile[] tiles;
-	private Pallet currentPallet;
+	public int cTile;
+	public Tile[] tiles;
+	public Pallet currentPallet;
 	private String font;
 	private int[][] letters;
 	private int[][] borderData;
 	private int[] cursorData;
-	private int currentColorIndex;
+	public int currentColorIndex;
 	private int inputDelay;
 	
 	private int windowScale;
 	private String documentTitle;
+	private String currentPos;
 	
 	private int currentVersion;
+
+	private Tool[] tools;
+	private Tool currentTool;
+	private SpriteParser sp;
 	
 	public void postInit(){
 		this.r = new Renderer(this.game.getImage());
@@ -47,10 +56,14 @@ public class PaintScreen extends Screen {
 		this.currentColorIndex = 0;
 		this.windowScale = 3;
 		this.inputDelay = 10;
-		this.font = "ABCDEFGHUOJKLMNOPQRSTUVWXYZ0123456789,.!?:+-*= ";
+		this.font = "SAVELOD";
 		this.letters = new int[this.font.length()][];
 		this.documentTitle = "Untitled";
 		this.currentVersion = 2;
+		this.currentPos = new File("").getAbsolutePath();
+		
+		this.sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
+		initTools();
 		initChars();
 		initBorder();
 		initCursor();
@@ -98,11 +111,14 @@ public class PaintScreen extends Screen {
 				int tsY = (my - drym) / this.sheetSize;
 				
 				if(this.input.leftMouseButton.justClicked()){
-					this.tiles[cTile].setData(tsX, tsY, this.currentPallet.colors[this.currentColorIndex]);
+					//this.tiles[cTile].setData(tsX, tsY, this.currentPallet.colors[this.currentColorIndex]);
+					this.currentTool.onClick(this, tsX, tsY, this.currentPallet.colors[this.currentColorIndex], this.tiles[this.cTile].getData()[tsX + tsY * 8]);
+					//this.inputDelay = 5;
 				}
 				
-				if(this.input.rightMouseButton.justClicked()){
+				if(this.input.rightMouseButton.justClicked()){// Perminent eraser
 					this.tiles[cTile].setData(tsX, tsY, -1);
+					//this.inputDelay = 20;
 				}
 			}
 			
@@ -125,7 +141,7 @@ public class PaintScreen extends Screen {
 				}
 			}
 			
-			this.r.setPixel(paxM, payM+1, 255 << 16);
+			//this.r.setPixel(paxM, payM+1, 255 << 16);
 			
 			//This section will check to see if the mouse is over the load and save buttons
 			int baxm = 128 + 24 + 8 - 16;
@@ -147,6 +163,22 @@ public class PaintScreen extends Screen {
 				}
 			}
 		}
+		
+		//This section checks if the mouse is over the tool panel
+		
+		int tpxm = 11 * 8;
+		int tpym = 2 * 8;
+		int tpxM = tpxm + (3 * 8);
+		int tpyM = tpym + (6 * 8);
+		if(mx > tpxm && my > tpym && mx < tpxM && my < tpyM){
+			int tsX = (mx - tpxm) / this.sheetSize;
+			int tsY = (my - tpym) / this.sheetSize;
+			if(this.input.leftMouseButton.justClicked()){
+				int newToolIndex = tsX + tsY * 3;
+				if(newToolIndex > this.tools.length || newToolIndex < 0)newToolIndex = 0;
+				this.currentTool = this.tools[newToolIndex];
+			}
+		}
 	}
 
 	@Override
@@ -154,7 +186,7 @@ public class PaintScreen extends Screen {
 		this.r.fill(this.r.makeRGB(123, 164, 255));
 		
 
-		renderBorder(11, 2, 3, 6);
+		drawTools();
 		drawWholeSheet();
 		drawCurrent();
 		renderBorder(1,14,23,4);
@@ -259,9 +291,33 @@ public class PaintScreen extends Screen {
 		}
 	}
 	
+	public void drawTools(){
+		renderBorder(11, 2, 3, 6);
+		
+		int xo = 11 * 8;
+		int yo = 2 * 8;
+		for(int i = 0; i < this.tools.length; i++){
+			Tool t = this.tools[i];
+			if(t == null)continue;
+			int tx = i % 3;
+			int ty = i / 3;
+			for(int j = 0; j < 8 * 8; j++){
+				int dx = j % 8;
+				int dy = j / 8;
+				this.r.setPixel(xo + (tx * 8) + dx, yo + (ty * 8) + dy, t.data[j]);
+				
+				if(this.currentTool == t){
+					if(dx == 0 || dy == 0 || dx == 7 || dy == 7){
+						this.r.setPixel(xo + (tx * 8) + dx, yo + (ty * 8) + dy, 255 << 16);
+					}
+				}
+			}
+		}
+	}
+	
 	public void save(){
 		if(this.inputDelay > 0)return;
-		JFileChooser jfc = new JFileChooser();
+		JFileChooser jfc = new JFileChooser(this.currentPos);
 		int out = jfc.showSaveDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
@@ -285,9 +341,9 @@ public class PaintScreen extends Screen {
 			}
 
 			boolean noEnding = file.getName().indexOf(".")==-1;
-			String fileName = noEnding?file.getName()+".art":file.getName();
 			this.documentTitle = file.getName().indexOf(".")==-1?file.getName():file.getName().substring(0,file.getName().indexOf("."));
 			File newFile = new File((noEnding?file.getAbsolutePath()+".art":file.getAbsolutePath()));
+			this.currentPos = newFile.getParent();
 			try(FileWriter fw = new FileWriter(newFile)) {
 			    fw.write(output);
 			    fw.close();
@@ -300,11 +356,12 @@ public class PaintScreen extends Screen {
 	
 	public void load(){
 		if(this.inputDelay > 0)return;
-		JFileChooser jfc = new JFileChooser();
+		JFileChooser jfc = new JFileChooser(this.currentPos);
 		int out = jfc.showOpenDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
 			String fileName = jfc.getSelectedFile().getName();
+			this.currentPos = jfc.getSelectedFile().getParent();
 			if(fileName.indexOf(".") != -1){//Has extension
 				String ext = fileName.substring(fileName.indexOf(".") + 1);
 				ext = ext.trim();
@@ -351,9 +408,7 @@ public class PaintScreen extends Screen {
 						if(!usingHex){// Not HEX values
 							frame[j] = Integer.parseInt(c);
 						}else{
-							if(data[j].equals("-1")){
-								frame[j] = -1;
-							}else frame[j] = Integer.parseInt(c, 16);
+							frame[j] = CompressionManager.decompress(c);
 						}
 						
 
@@ -362,7 +417,6 @@ public class PaintScreen extends Screen {
 						this.tiles[cell].setData(dx, dy, frame[j]);
 					}
 					cell++;
-					//this.tiles[cell++].setData(frame);
 				}
 			}
 		}
@@ -417,7 +471,6 @@ public class PaintScreen extends Screen {
 					tx = 4;
 				}
 				
-				if(tx == 1)continue;
 				
 				int[] data = this.borderData[tx];
 				
@@ -425,46 +478,67 @@ public class PaintScreen extends Screen {
 					int dx = i % 8;
 					int dy = i / 8;
 					
-					if(xflip)dx = 7 - dx;
-					if(yflip)dy = 7 - dy;
-					this.r.setPixel(x + (xx * 8) + dx, y + (yy * 8) + dy, data[i]);
+					if(tx != 1){
+						if(xflip)dx = 7 - dx;
+						if(yflip)dy = 7 - dy;
+						this.r.setPixel(x + (xx * 8) + dx, y + (yy * 8) + dy, data[i]);
+					}else{
+						this.r.setPixel(x + (xx * 8) + dx, y + (yy * 8) + dy, (this.r.makeRGB(123, 164, 255) & 0xFEFEFE) >> 1);
+					}
 				}
 			}
 		}
 	}
 	
 	public void initChars(){
-		SpriteParser sp = new SpriteParser(8,FileIO.instance.readInternalFile("/sheet2.art"));
-		int off = 18;
+		int off = 6;
 		for(int i = 0; i < this.letters.length; i++){
 			int tx = (off + i) % 8;
 			int ty = (off + i) / 8;
-			this.letters[i] = sp.getData(tx, ty);
+			this.letters[i] = this.sp.getData(tx, ty);
 		}
 	}
 	
 	public void initBorder(){
-		SpriteParser sp = new SpriteParser(8,FileIO.instance.readInternalFile("/sheet2.art"));
 		this.borderData = new int[5][];
-		int off = 9;
+		int off = 1;
 		for(int i = 0; i < this.borderData.length; i++){
 			int tx = (off + i) % 8;
 			int ty = (off + i) / 8;
-			this.borderData[i] = sp.getData(tx, ty);
+			this.borderData[i] = this.sp.getData(tx, ty);
 		}
 	}
 	
 	public void initCursor(){
-		SpriteParser sp = new SpriteParser(8,FileIO.instance.readInternalFile("/sheet2.art"));
-		this.cursorData = sp.getData(0, 2);
+		this.cursorData = this.sp.getData(1, 2);
+	}
+	
+	public void initTools(){
+		this.tools = new Tool[12];
+		this.tools[0] = new Pencil(this.sp);
+		this.tools[1] = new Fill(this.sp);
+		this.tools[2] = new Pipette(this.sp);
+		
+		this.currentTool = this.tools[1];
 	}
 	
 	public void drawCursor(){
 		for(int i = 0; i < 8 * 8; i++){
 			int dx = i % 8;
 			int dy = i / 8;
-			this.r.setPixel(this.mx + dx - 2, this.my + dy - 6, this.cursorData[i]);
+			this.r.setPixel(this.mx + dx - 2, this.my + dy - 6, this.currentTool.data[i]);
 		}
+	}
+	
+	public void setColorIndex(int col){
+		int res = -1;
+		for(int i = 0; i < this.currentPallet.colors.length; i++){
+			if(this.currentPallet.colors[i] == col){
+				res = i;
+				return;
+			}
+		}
+		this.currentColorIndex = res;
 	}
 
 }
