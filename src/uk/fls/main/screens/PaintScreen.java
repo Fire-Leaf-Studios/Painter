@@ -60,7 +60,7 @@ public class PaintScreen extends Screen {
 		this.font = "SAVELOD";
 		this.letters = new int[this.font.length()][];
 		this.documentTitle = "Untitled";
-		this.currentVersion = 2;
+		this.currentVersion = 3;
 		this.currentPos = new File("").getAbsolutePath();
 		
 		this.sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
@@ -327,16 +327,38 @@ public class PaintScreen extends Screen {
 			
 			File file = jfc.getSelectedFile();
 			String output = "";
-			output += "?Version: " + this.currentVersion + "\n";		
-			
+			output += "?Version: " + this.currentVersion + "\n";
 			for(int i = 0; i < this.tiles.length; i++){
 				String thisTile = "#";
 				int[] data = this.tiles[i].getData();
-				int amt = 0;	
-				for(int j = 0; j < data.length; j++){
+				int amt = 1;
+				for(int j = 0; j < data.length-1; j++){
 					int c = data[j];
-					thisTile += (c==-1?"-1":Integer.toHexString(c))+",";
+					int pc = data[j+1];
+					
+					if((j+1) == 63){//Final pixel
+						if(c == pc)amt++;
+						if(amt > 1){
+							thisTile += amt + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+							amt = 1;
+						}else{
+							thisTile += (c==-1?-1:Integer.toHexString(c))+",";
+						}
+					}else{
+						if(c == pc){
+							amt++;
+							continue;
+						}else{
+							if(amt > 1){
+								thisTile += amt + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+								amt = 1;
+							}else{
+								thisTile += (c==-1?-1:Integer.toHexString(c))+",";
+							}
+						}
+					}
 				}
+				thisTile = thisTile.substring(0,thisTile.length()-1);
 				thisTile = thisTile.trim();
 				output += thisTile + "\n";
 			}
