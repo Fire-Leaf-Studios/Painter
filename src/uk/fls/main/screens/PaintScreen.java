@@ -339,7 +339,7 @@ public class PaintScreen extends Screen {
 					if((j+1) == 63){//Final pixel
 						if(c == pc)amt++;
 						if(amt > 1){
-							thisTile += amt + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+							thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
 							amt = 1;
 						}else{
 							thisTile += (c==-1?-1:Integer.toHexString(c))+",";
@@ -350,7 +350,7 @@ public class PaintScreen extends Screen {
 							continue;
 						}else{
 							if(amt > 1){
-								thisTile += amt + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+								thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
 								amt = 1;
 							}else{
 								thisTile += (c==-1?-1:Integer.toHexString(c))+",";
@@ -409,7 +409,7 @@ public class PaintScreen extends Screen {
 					System.out.println(name);
 					if(name.equals("Version")){
 						int ver = Integer.valueOf(value);
-						if(ver >= 2){
+						if(ver == 2){
 							usingHex = true;
 						}
 						
@@ -420,24 +420,31 @@ public class PaintScreen extends Screen {
 				}
 			}
 			
+			System.out.println(usingHex + ":" + usingCompresion);
+			
 			int cell = 0;
 			for(int i = 0; i < lines.length; i++){
 				String line = lines[i];
 				if(line.startsWith("#")){
 					String[] data = line.substring(1).split(",");
 					int[] frame = new int[this.sheetSize * this.sheetSize];
-					for(int j = 0; j < data.length; j++){
-						String c = data[j].trim();
-						if(!usingHex){// Not HEX values
-							frame[j] = Integer.parseInt(c);
-						}else{
-							frame[j] = CompressionManager.decompress(c);
+					
+					if(!usingCompresion){
+						for(int j = 0; j < data.length; j++){
+							String c = data[j].trim();
+							if(!usingHex){// Not HEX values
+								frame[j] = Integer.parseInt(c);
+							}else{
+								frame[j] = CompressionManager.decompress(c);
+							}
+							
+	
+							int dx = j % this.sheetSize;
+							int dy = j / this.sheetSize;
+							this.tiles[cell].setData(dx, dy, frame[j]);
 						}
-						
-
-						int dx = j % this.sheetSize;
-						int dy = j / this.sheetSize;
-						this.tiles[cell].setData(dx, dy, frame[j]);
+					}else{
+						this.tiles[cell].setData(CompressionManager.superDecompress(line));
 					}
 					cell++;
 				}

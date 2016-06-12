@@ -18,6 +18,11 @@ public class Tile {
 		this.data[x + y * this.w] = c;
 	}
 	
+	public void setData(int[] d){
+		if(d.length != this.data.length)return;
+		this.data = d;
+	}
+	
 	public int[] getData(){
 		return this.data;
 	}
