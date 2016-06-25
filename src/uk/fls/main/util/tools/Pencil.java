@@ -1,12 +1,12 @@
 package uk.fls.main.util.tools;
 
+import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.screens.PaintScreen;
-import uk.fls.main.util.SpriteParser;
 
 public class Pencil extends Tool{
 
 	public Pencil(SpriteParser sp){
-		this.data = sp.getData(1, 2);
+		this.data = sp.getData(0, 2);
 	}
 
 	@Override

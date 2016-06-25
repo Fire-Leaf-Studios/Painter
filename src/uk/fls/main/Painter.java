@@ -8,8 +8,8 @@ import java.awt.image.BufferedImage;
 import fls.engine.main.Init;
 import fls.engine.main.input.Input;
 import fls.engine.main.io.FileIO;
+import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.screens.PaintScreen;
-import uk.fls.main.util.SpriteParser;
 
 @SuppressWarnings("serial")
 public class Painter extends Init{

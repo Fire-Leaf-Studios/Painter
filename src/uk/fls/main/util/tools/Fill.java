@@ -1,13 +1,13 @@
 package uk.fls.main.util.tools;
 
+import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.screens.PaintScreen;
-import uk.fls.main.util.SpriteParser;
 import uk.fls.main.util.Tile;
 
 public class Fill extends Tool{
 
 	public Fill(SpriteParser sp){
-		this.data = sp.getData(2, 2);
+		this.data = sp.getData(1, 2);
 	}
 
 	@Override

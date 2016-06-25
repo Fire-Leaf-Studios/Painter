@@ -9,9 +9,9 @@ import javax.swing.JFileChooser;
 import fls.engine.main.io.FileIO;
 import fls.engine.main.screen.Screen;
 import fls.engine.main.util.Renderer;
-import uk.fls.main.util.CompressionManager;
+import fls.engine.main.util.rendertools.CompressionManager;
+import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.util.Pallet;
-import uk.fls.main.util.SpriteParser;
 import uk.fls.main.util.Tile;
 import uk.fls.main.util.tools.Fill;
 import uk.fls.main.util.tools.Pencil;
@@ -322,12 +322,11 @@ public class PaintScreen extends Screen {
 		int out = jfc.showSaveDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
-			
-			
-			
 			File file = jfc.getSelectedFile();
 			String output = "";
 			output += "?Version: " + this.currentVersion + "\n";
+			
+			int d = 0 ;
 			for(int i = 0; i < this.tiles.length; i++){
 				String thisTile = "#";
 				int[] data = this.tiles[i].getData();
@@ -337,12 +336,20 @@ public class PaintScreen extends Screen {
 					int pc = data[j+1];
 					
 					if((j+1) == 63){//Final pixel
-						if(c == pc)amt++;
-						if(amt > 1){
-							thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
-							amt = 1;
+						boolean same = true;
+						if(c == pc)amt ++;
+						else same = false;
+						System.out.println(same);
+						if(same){
+							if(amt > 1){
+								thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+								amt = 1;
+							}else{
+								thisTile += (c==-1?-1:Integer.toHexString(c))+",";
+							}
 						}else{
-							thisTile += (c==-1?-1:Integer.toHexString(c))+",";
+							thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
+							thisTile += (pc==-1?-1:Integer.toHexString(pc))+",";
 						}
 					}else{
 						if(c == pc){
@@ -358,7 +365,7 @@ public class PaintScreen extends Screen {
 						}
 					}
 				}
-				thisTile = thisTile.substring(0,thisTile.length()-1);
+				thisTile = thisTile.substring(0,thisTile.length());
 				thisTile = thisTile.trim();
 				output += thisTile + "\n";
 			}
@@ -406,7 +413,6 @@ public class PaintScreen extends Screen {
 					String data = l.substring(1);
 					String name = data.substring(0, data.indexOf(":")).trim();
 					String value = data.substring(data.indexOf(":") + 1).trim();
-					System.out.println(name);
 					if(name.equals("Version")){
 						int ver = Integer.valueOf(value);
 						if(ver == 2){
@@ -419,8 +425,6 @@ public class PaintScreen extends Screen {
 					}
 				}
 			}
-			
-			System.out.println(usingHex + ":" + usingCompresion);
 			
 			int cell = 0;
 			for(int i = 0; i < lines.length; i++){
@@ -521,7 +525,7 @@ public class PaintScreen extends Screen {
 	}
 	
 	public void initChars(){
-		int off = 6;
+		int off = 5;
 		for(int i = 0; i < this.letters.length; i++){
 			int tx = (off + i) % 8;
 			int ty = (off + i) / 8;
@@ -531,7 +535,7 @@ public class PaintScreen extends Screen {
 	
 	public void initBorder(){
 		this.borderData = new int[5][];
-		int off = 1;
+		int off = 0;
 		for(int i = 0; i < this.borderData.length; i++){
 			int tx = (off + i) % 8;
 			int ty = (off + i) / 8;

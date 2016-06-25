@@ -1,12 +1,12 @@
 package uk.fls.main.util.tools;
 
+import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.screens.PaintScreen;
-import uk.fls.main.util.SpriteParser;
 
 public class Pipette extends Tool{
 	
 	public Pipette(SpriteParser sp){
-		this.data = sp.getData(3, 2);
+		this.data = sp.getData(2, 2);
 	}
 
 	@Override
