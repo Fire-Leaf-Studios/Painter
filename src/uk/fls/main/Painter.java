@@ -34,7 +34,7 @@ public class Painter extends Init{
 		
 		int scale = 4;
 		BufferedImage icon = new BufferedImage(8 * scale, 8 * scale,BufferedImage.TYPE_INT_RGB);
-		SpriteParser sp = new SpriteParser(8, FileIO.instance.readInternalFile("/sheet2.art"));
+		SpriteParser sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
 		
 		int[] d = sp.getData(1, 2);
 		int[] res = new int[32 * 32];
