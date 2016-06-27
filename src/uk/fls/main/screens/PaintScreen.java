@@ -63,9 +63,6 @@ public class PaintScreen extends Screen {
 		this.currentPos = new File("").getAbsolutePath();
 		
 		this.sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
-		System.out.println("Check");
-		this.sp.getData(0, 0);
-		System.out.println("Passed!");
 		initialise();
 	}
 	

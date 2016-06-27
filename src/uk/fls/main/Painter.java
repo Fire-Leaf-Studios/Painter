@@ -10,6 +10,7 @@ import fls.engine.main.input.Input;
 import fls.engine.main.io.FileIO;
 import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.screens.PaintScreen;
+import uk.fls.main.util.plugins.Version;
 
 @SuppressWarnings("serial")
 public class Painter extends Init{
@@ -17,8 +18,10 @@ public class Painter extends Init{
 	private static int w = 200;
 	private static int h = (w / 4) * 3;
 	private static int s = 3;
+	
+	public static final Version VER = new Version(1,0,0);
 	public Painter(){
-		super("FLS Painter V1", w * s, h * s);
+		super("FLS Painter " + VER.asString(), w * s, h * s);
 		useCustomBufferedImage(w, h, false);
 		setInput(new Input(this, Input.MOUSE));
 		setScreen(new PaintScreen());

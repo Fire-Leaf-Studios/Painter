@@ -27,6 +27,7 @@ public abstract class Plugin {
 	
 	protected void addTool(Tool t){
 		if(this.tools == null)this.tools = new ArrayList<Tool>();
+		t.setPlugin(this);
 		this.tools.add(t);
 	}
 	
@@ -37,5 +38,17 @@ public abstract class Plugin {
 	
 	public List<Tool> getTools(){
 		return this.tools;
+	}
+	
+	public void log(String out){
+		System.out.println("[" + getTitle() + "] " + out);
+	}
+	
+	public void logf(String s, Object...a){
+		System.out.printf("[" + getTitle() + "] " + s + "\n", a);
+	}
+	
+	private String getTitle(){
+		return this.resources.getInfo().getName() + " : " + this.resources.getInfo().getPluginVersion().asString();
 	}
 }

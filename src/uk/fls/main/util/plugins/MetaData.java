@@ -2,12 +2,15 @@ package uk.fls.main.util.plugins;
 
 import java.util.HashMap;
 
-import fls.engine.main.io.FileIO;
-
 public class MetaData {
 
 	private String fileData;
 	private boolean loaded;
+	
+	private Version max;
+	private Version min;
+	private Version cur;
+	
 	private HashMap<String, String> values;
 
 	public MetaData(String d) {
@@ -30,15 +33,24 @@ public class MetaData {
 	}
 
 	public Version getMinVersion() {
-		return Version.parse(this.values.get("max-version"));
+		if(this.min == null){
+			this.min = Version.parse(this.values.get("min-version"));
+		}
+		return this.min;
 	}
 
 	public Version getMaxVersion() {
-		return Version.parse(this.values.get("min-version"));
+		if(this.max == null){
+			this.max = Version.parse(this.values.get("max-version"));
+		}
+		return this.max;
 	}
 
 	public Version getPluginVersion() {
-		return Version.parse(this.values.get("version"));
+		if(this.cur == null){
+			this.cur = Version.parse(this.values.get("version"));
+		}
+		return this.cur;
 	}
 
 	public String getUpdated() {

@@ -13,6 +13,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import fls.engine.main.io.FileIO;
+import uk.fls.main.Painter;
 import uk.fls.main.util.tools.Downloader;
 import uk.fls.main.util.tools.Tool;
 
@@ -20,6 +21,7 @@ public class PluginManager {
 
 	private File pluginsFolder;
 	private List<Plugin> plugins;
+	private List<Plugin> validPlugins;
 	private List<File> pluginFiles;
 	private HashMap<String, PluginResource> infoFiles;
 	private Downloader dl;
@@ -41,6 +43,7 @@ public class PluginManager {
 	
 	private void findPlugins(){
 		this.plugins = new ArrayList<Plugin>();
+		this.validPlugins = new ArrayList<Plugin>();
 		this.pluginFiles = new ArrayList<File>();
 		this.infoFiles = new HashMap<String, PluginResource>();
 		File[] files = this.pluginsFolder.listFiles();
@@ -74,7 +77,7 @@ public class PluginManager {
 				Class<? extends Plugin> pluginClass = (Class<? extends Plugin>) cl.loadClass(md.getMain());
 				Plugin p = pluginClass.newInstance();
 				p.setResources(this.infoFiles.get(this.pluginFiles.get(i).getName()));
-				this.plugins.add(p);
+				registerPlugin(p);
 				continue;
 				
 			} catch (ClassNotFoundException e) {
@@ -87,13 +90,14 @@ public class PluginManager {
 			log("Error creating plugin instace for " + md.getMain());
 		}
 		
-		log("Found " + this.plugins.size() + " plugins");
+		this.pluginFiles.clear();
+		this.infoFiles.clear();
 	}
 	
 	private void orderAndValidatePlugins(){
 		int corePos = -1;
-		for(int i = 0; i < this.plugins.size(); i++){
-			if(this.plugins.get(i).getInfo().getName().equals("Core plugin")){
+		for(int i = 0; i < this.validPlugins.size(); i++){
+			if(this.validPlugins.get(i).getInfo().getName().equals("Core plugin")){
 				corePos = i;
 				break;
 			}
@@ -108,25 +112,90 @@ public class PluginManager {
 		}
 		
 		if(corePos != 0){
-			Plugin first = this.plugins.get(0);
-			Plugin core = this.plugins.get(corePos);
+			Plugin first = this.validPlugins.get(0);
+			Plugin core = this.validPlugins.get(corePos);
 			this.plugins.set(0, core);
 			this.plugins.set(corePos, first);
-			
-			List<Plugin> invalid = new ArrayList<Plugin>();
-			for(int i = 0; i < this.infoFiles.size(); i++){
-				if(this.infoFiles.get(this.plugins.get(i).getInfo()) == null){
-					invalid.add(this.plugins.get(i));
+		}
+		
+		if(this.validPlugins.size() == 1){
+			log("Running with " + this.validPlugins.size() + " plugin");	
+		}else{
+			log("Running with " + this.validPlugins.size() + " plugins");
+		}
+	}
+	
+	private void registerPlugin(Plugin p){
+		if(isValidPlugin(p)){
+			log("Loaded plugin: " + p.getInfo().getName() + " - " + p.getInfo().getPluginVersion().asString());
+			this.plugins.add(p);
+			this.validPlugins.add(p);
+		}
+	}
+	
+	private boolean isValidPlugin(Plugin p){
+		MetaData meta = p.getInfo();
+		
+		if(meta == null)return false;
+		
+		if(meta.getName() == null){
+			logf("Found an unnamed plugin");
+			return false;
+		}
+		
+		if(meta.getPluginVersion() == null){
+			p.log("Missing 'version' field in 'plugin.info' file");
+			return false;
+		}
+		
+		if(meta.getMinVersion() != null){
+			if(Painter.VER.isLower(meta.getMinVersion())){
+				p.log("Requires a newer version of FLS Painter");
+				p.log("Current running: " + Painter.VER.asString());
+				p.log("Need at least: " + meta.getMinVersion().asString());
+				this.plugins.add(p);
+				return false;
+			}
+		}
+		
+		if(meta.getMaxVersion() != null){
+			if(Painter.VER.isGreater(meta.getMaxVersion())){
+				p.log("Requires an older version of FLS Painter");
+				p.log("Current running: " + Painter.VER.asString());
+				p.log("Need to have less than: " + meta.getMaxVersion().asString());
+				this.plugins.add(p);
+				return false;
+			}
+		}
+		
+		Version ver = meta.getPluginVersion();
+		List<Plugin> dups = new ArrayList<Plugin>();
+		for(Plugin p2 : this.validPlugins){
+			if(p2.getInfo().getName().equals(meta.getName())){// Duplicate?
+				
+				p.log("Found duplicate");
+				Version ver2 = p2.getInfo().getPluginVersion();
+				if(ver.isGreater(ver2)){
+					p.logf("Using %s", ver.asString());
+					dups.add(p2);
+				}else{
+					p.logf("Using %s", ver2.asString());
+					this.plugins.add(p);
+					return false;
 				}
 			}
-			this.plugins.removeAll(invalid);
-			log("Removed invalid plugins");
 		}
-		log("Running with " + this.plugins.size() + " plugin(s) loaded");
+		
+		this.validPlugins.removeAll(dups);
+		return true;
 	}
 	
 	private void log(String s){
 		System.out.println("[Plugin Manager] " + s);
+	}
+	
+	private void logf(String s, Object...values){
+		System.out.printf("[Plugin Manager] " + s + "\n", values);
 	}
 	
 	private PluginResource loadPluginResources(File f){
@@ -171,11 +240,10 @@ public class PluginManager {
 	}
 	
 	public void loadTools(List<Tool> tools){
-		for(int i = 0; i < this.plugins.size(); i++){
-			Plugin p = this.plugins.get(i);
+		for(int i = 0; i < this.validPlugins.size(); i++){
+			Plugin p = this.validPlugins.get(i);
 			for(int j = 0; j < p.getTools().size(); j++){
 				Tool tool = p.getTools().get(j);
-				tool.setFromPlugin();
 				if(p.getResources().getIconData() != null){
 					tool.setSpriteHolder(p.getResources().getIconData());
 				}
