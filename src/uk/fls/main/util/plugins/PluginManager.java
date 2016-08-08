@@ -14,6 +14,7 @@ import java.util.jar.JarFile;
 
 import fls.engine.main.io.FileIO;
 import uk.fls.main.Painter;
+import uk.fls.main.screens.PaintScreen;
 import uk.fls.main.util.tools.Downloader;
 import uk.fls.main.util.tools.Tool;
 
@@ -26,6 +27,8 @@ public class PluginManager {
 	private HashMap<String, PluginResource> infoFiles;
 	private Downloader dl;
 	
+	public static PluginManager instance = new PluginManager();
+	
 	public PluginManager(){
 		this.pluginsFolder = new File(FileIO.path+"/plugins");
 		if(!this.pluginsFolder.exists()){
@@ -37,8 +40,6 @@ public class PluginManager {
 		}
 		
 		this.dl = new Downloader();
-		
-		reload();
 	}
 	
 	private void findPlugins(){
@@ -239,7 +240,7 @@ public class PluginManager {
 		return null;
 	}
 	
-	public void loadTools(List<Tool> tools){
+	public void loadTools(List<Tool> tools, PaintScreen ps){
 		for(int i = 0; i < this.validPlugins.size(); i++){
 			Plugin p = this.validPlugins.get(i);
 			for(int j = 0; j < p.getTools().size(); j++){
@@ -247,13 +248,14 @@ public class PluginManager {
 				if(p.getResources().getIconData() != null){
 					tool.setSpriteHolder(p.getResources().getIconData());
 				}
+				tool.setPaintScreen(ps);
 				tool.init();
 				tools.add(tool);
 			}
 		}
 	}
 	
-	private void reload(){
+	public void reload(){
 		findPlugins();
 		orderAndValidatePlugins();
 	}

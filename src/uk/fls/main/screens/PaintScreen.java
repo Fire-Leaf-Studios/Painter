@@ -10,8 +10,8 @@ import javax.swing.JFileChooser;
 
 import fls.engine.main.io.FileIO;
 import fls.engine.main.screen.Screen;
+import fls.engine.main.util.Point;
 import fls.engine.main.util.Renderer;
-import fls.engine.main.util.rendertools.CompressionManager;
 import fls.engine.main.util.rendertools.SpriteParser;
 import uk.fls.main.util.Pallet;
 import uk.fls.main.util.Tile;
@@ -24,7 +24,8 @@ public class PaintScreen extends Screen {
 	private Renderer r;
 	private int mx,my;
 	private int cx, cy;
-	private int sheetSize = 8;
+	private int sheetSize;
+	private int tileSize;
 	private int cTile;
 	private Tile[] tiles;
 	private Pallet currentPallet;
@@ -37,32 +38,39 @@ public class PaintScreen extends Screen {
 	private int windowScale;
 	private String currentPos;
 	
-	private int currentVersion;
+	private int currentVersion; // Value used in save files
 
 	private List<Tool> tools;
 	private Tool currentTool;
 	private SpriteParser sp;
 	private int numTools;
 	
-	private PluginManager pluginManager;
+	private TileViwer tv;
+	private SheetViewer sv;
 	
 	public void postInit(){
 		this.r = new Renderer(this.game.getImage());
-		this.tiles = new Tile[this.sheetSize * this.sheetSize];
+		this.sheetSize = 8;
+		this.tileSize = 8;
+		
+		int nTiles = (this.tileSize);
+		this.tiles = new Tile[nTiles * nTiles];
 		for(int i = 0; i < this.tiles.length; i++){
-			this.tiles[i] = new Tile(sheetSize);
+			this.tiles[i] = new Tile(nTiles);
 		}
 		this.cTile = 0;
 		this.currentPallet = Pallet.def;
 		this.currentColorIndex = 0;
 		this.windowScale = 3;
 		this.inputDelay = 10;
-		this.font = "SAVELOD";
+		this.font = "SAVELOD-+0123456789";
 		this.letters = new int[this.font.length()][];
-		this.currentVersion = 3;
+		this.currentVersion = 4;
 		this.currentPos = new File("").getAbsolutePath();
 		
 		this.sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
+		this.tv = new TileViwer(new Point(128,8), this.tiles[0]);
+		this.sv = new SheetViewer(tiles, 64);
 		initialise();
 	}
 	
@@ -80,43 +88,9 @@ public class PaintScreen extends Screen {
 			this.mx = this.cx / windowScale;
 			this.my = this.cy / windowScale;
 			
-			
-			// This checks to see if the mouse if within the tile select area
-			int tsxm = 8;
-			int tsym = 8;
-			int tsxM = tsxm + (this.sheetSize * this.sheetSize);
-			int tsyM = tsym + (this.sheetSize * this.sheetSize);
-			
-			if(mx > tsym && my > tsym && mx < tsxM && my < tsyM){
-				int tsX = (mx - tsxm) / this.sheetSize;
-				int tsY = (my - tsym) / this.sheetSize;
-				
-				if(this.input.leftMouseButton.justClicked()){
-					this.cTile = tsX + tsY * this.sheetSize;
-				}
-			}
-			
-			//This checks to see if the mouse if over the draw area
-			int drxm = 128;
-			int drym = 8;
-			
-			int drxM = drxm + (this.sheetSize * this.sheetSize);
-			int dryM = drym + (this.sheetSize * this.sheetSize);
-			
-			if(mx > drxm && my > drym && mx < drxM && my < dryM){
-				int tsX = (mx - drxm) / this.sheetSize;
-				int tsY = (my - drym) / this.sheetSize;
-				
-				if(this.input.leftMouseButton.justClicked()){
-					//this.tiles[cTile].setData(tsX, tsY, this.currentPallet.colors[this.currentColorIndex]);
-					this.currentTool.onClick(this, tsX, tsY, this.currentPallet.colors[this.currentColorIndex], this.tiles[this.cTile].getData()[tsX + tsY * 8]);
-					//this.inputDelay = 5;
-				}
-				
-				if(this.input.rightMouseButton.justClicked()){// Perminent eraser
-					this.tiles[cTile].setData(tsX, tsY, -1);
-					//this.inputDelay = 20;
-				}
+			this.tv.update(input, this, mx, my);
+			if(this.sv.update(input, this, mx, my)){
+				this.tv.setTile(this.sv.getCurrentTile());
 			}
 			
 		
@@ -127,8 +101,8 @@ public class PaintScreen extends Screen {
 			int payM = paym + (Math.max((this.currentPallet.colors.length / 16), 1) * 8);
 			
 			if(mx > paxm && my > paym && mx < paxM && my < payM){
-				int tsX = (mx - paxm) / this.sheetSize;
-				int tsY = (my - paym) / this.sheetSize;
+				int tsX = (mx - paxm) / 8;
+				int tsY = (my - paym) / 8;
 				
 				if(this.input.leftMouseButton.justClicked()){
 					int newIndex = tsX + tsY * 16;
@@ -137,8 +111,6 @@ public class PaintScreen extends Screen {
 					this.currentColorIndex = newIndex;
 				}
 			}
-			
-			//this.r.setPixel(paxM, payM+1, 255 << 16);
 			
 			//This section will check to see if the mouse is over the load and save buttons
 			int baxm = 128 + 24 + 8 - 16;
@@ -168,12 +140,45 @@ public class PaintScreen extends Screen {
 		int tpxM = tpxm + (3 * 8);
 		int tpyM = tpym + (Math.max((this.numTools / 3) + 1,1) * 8);
 		if(mx > tpxm && my > tpym && mx < tpxM && my < tpyM){
-			int tsX = (mx - tpxm) / this.sheetSize;
-			int tsY = (my - tpym) / this.sheetSize;
+			int tsX = (mx - tpxm) / 8;
+			int tsY = (my - tpym) / 8;
 			if(this.input.leftMouseButton.justClicked()){
 				int newToolIndex = tsX + tsY * 3;
 				if(!(newToolIndex >= this.tools.size() || newToolIndex < 0))this.currentTool = this.tools.get(newToolIndex);
 			}
+		}
+		
+		//This section checks to see if the mouse is over the minus size button
+		
+		int msbx = 10 * 8;
+		int msby = 11 * 8;
+		
+		int psbx = 14 * 8;
+		int psby = 11 * 8;
+		
+		
+		int firstSize = this.sheetSize;
+		if(mx > msbx && my > msby && mx < msbx + 8 && my < msby + 8){
+			if(this.input.leftMouseButton.justClicked()){
+				firstSize /= 2;
+				if(firstSize < 4)firstSize = 4;
+				this.inputDelay = 10;
+			}
+		}
+		
+		if(mx > psbx && my > psby && mx < psbx + 8 && my < psby + 8){
+			if(this.input.leftMouseButton.justClicked()){
+				firstSize *= 2;
+				if(firstSize > 32)firstSize = 32;
+				this.inputDelay = 10;
+			}
+		}
+		
+		if(this.sheetSize != firstSize){
+			chageSize(firstSize);
+			this.sv.setTileArray(this.tiles);
+			this.tv.setTile(this.sv.getCurrentTile());
+			this.sheetSize = firstSize;
 		}
 	}
 
@@ -183,68 +188,45 @@ public class PaintScreen extends Screen {
 		
 
 		drawTools();
-		drawWholeSheet();
-		drawCurrent();
+		//drawWholeSheet();
+
+		renderBorder(1,1,8,8);
+		this.sv.render(r);
+		
+		renderBorder(16,1,8,8);
+		this.tv.render(r);
+		
+		
 		renderBorder(1,14,23,4);
 		drawPallet();
 		drawButtons();
 		
-		//renderString(this.documentTitle,8,64 + 8 * 3);
-		
+		drawCurrentSize();
 		drawCursor();
 		
-		this.r.finaliseRender();
+		//this.r.finaliseRender();
 	}
 	
-	private void drawWholeSheet(){
-		int xoff = 8;
-		int yoff = 8;
-		
-		renderBorder(1,1,8,8);
-		
-		for(int i = 0; i < this.tiles.length; i++){
-			Tile t = this.tiles[i];
-			int tx = i % this.sheetSize;
-			int ty = i / this.sheetSize;
-			int[] cData = t.getData();
-			for(int j = 0; j < this.sheetSize * this.sheetSize; j++){
-				int dx = j % this.sheetSize;
-				int dy = j / this.sheetSize;
-				
-				int fx = xoff + (tx * 8) + dx;
-				int fy = yoff + (ty * 8) + dy;
-				
-				int cc = cData[j] == -1?(this.r.makeRGB(123, 164, 255) & 0xFEFEFE) >> 1:cData[j];
-				if(this.cTile == i){
-					if(dx == 0 || dy == 0 || dy == this.sheetSize-1|| dx == this.sheetSize-1)this.r.setPixel(fx, fy, this.r.makeRGB(255,0,0));
-					else this.r.setPixel(fx, fy, cc);
-				}else{
-					//if(dx == 0 || dy == 0 || dy == this.sheetSize || dx == this.sheetSize)this.r.setPixel(fx, fy, this.r.makeRGB(64,64,64));
-					this.r.setPixel(fx, fy, cc);
-				}
+	private void drawCurrentSize(){
+		if(this.sheetSize > 4){
+			for(int i = 0; i < 8 * 8; i++){
+				int dx = i % 8;
+				int dy = i / 8;
+				r.setPixel((8 * 10) + dx, dy + (8 * 11), 255 << 16);
 			}
+			renderString("-", 8 * 10, 8 * 11);
 		}
-	}
-	
-	private void drawCurrent(){
-		int s = 8;
-		int xOff = 128;
-		int yOff = 8;
 		
-		renderBorder(16,1,8,8);
-		
-		int square = this.sheetSize * this.sheetSize;
-		Tile c = this.tiles[this.cTile];
-		int[] data = c.getData();
-		for(int i = 0; i < square; i++){
-			int tx = i % this.sheetSize;
-			int ty = i / this.sheetSize;
-			int cc = data[i] == -1?(this.r.makeRGB(123, 164, 255) & 0xFEFEFE) >> 1:data[i];
-			for(int j = 0; j < square; j++){
-				int dx = j % this.sheetSize;
-				int dy = j / this.sheetSize;
-				this.r.setPixel(xOff + (tx * s) + dx, yOff + (ty * s) + dy, cc);
+		int xo = ((""+this.sheetSize).length() - 1) * 4;
+		renderString(""+this.sheetSize,8 * 12 - xo,8 * 11);
+
+		if(this.sheetSize < 32){
+			for(int i = 0; i < 8 * 8; i++){
+				int dx = i % 8;
+				int dy = i / 8;
+				r.setPixel((8 * 14) + dx, dy + (8 * 11), 255 << 16);
 			}
+			renderString("+", 8 * 14, 8 * 11);
 		}
 	}
 	
@@ -316,20 +298,21 @@ public class PaintScreen extends Screen {
 			File file = jfc.getSelectedFile();
 			String output = "";
 			output += "?Version: " + this.currentVersion + "\n";
+			output += "?Size: " + this.sheetSize + "\n";
 			
-			for(int i = 0; i < this.tiles.length; i++){
+			for(int i = 0; i < this.sv.tiles.length; i++){
 				String thisTile = "#";
-				int[] data = this.tiles[i].getData();
+				int[] data = this.sv.tiles[i].getData();
+				int maxLength = this.sv.tiles[i].getWidth() * this.sv.tiles[i].getWidth();
 				int amt = 1;
 				for(int j = 0; j < data.length-1; j++){
 					int c = data[j];
 					int pc = data[j+1];
 					
-					if((j+1) == 63){//Final pixel
+					if((j+1) == maxLength - 1){//Final pixel
 						boolean same = true;
 						if(c == pc)amt ++;
 						else same = false;
-						System.out.println(same);
 						if(same){
 							if(amt > 1){
 								thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
@@ -379,8 +362,10 @@ public class PaintScreen extends Screen {
 		int out = jfc.showOpenDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
-			String fileName = jfc.getSelectedFile().getName();
-			this.currentPos = jfc.getSelectedFile().getParent();
+			
+			File sel = jfc.getSelectedFile();
+			String fileName = sel.getName();
+			this.currentPos = sel.getParent();
 			if(fileName.indexOf(".") != -1){//Has extension
 				String ext = fileName.substring(fileName.indexOf(".") + 1);
 				ext = ext.trim();
@@ -388,59 +373,20 @@ public class PaintScreen extends Screen {
 					System.err.println("Not a useable file type!!");
 					return;
 				}
-				fileName = fileName.substring(0, fileName.indexOf("."));
-			}
-			String[] lines = FileIO.instance.loadFile(jfc.getSelectedFile().getAbsolutePath()).split("\n");
-			
-			boolean usingHex = false;
-			boolean usingCompresion = false;
-			
-			for(int i = 0; i < lines.length; i++){//Looking for meta data
-				String l = lines[i].trim();
-				if(l.trim().startsWith("?")){//Found data
-					String data = l.substring(1);
-					String name = data.substring(0, data.indexOf(":")).trim();
-					String value = data.substring(data.indexOf(":") + 1).trim();
-					if(name.equals("Version")){
-						int ver = Integer.valueOf(value);
-						if(ver == 2){
-							usingHex = true;
-						}
-						
-						if(ver >= 3){
-							usingCompresion = true;
-						}
-					}
-				}
+				//fileName = fileName.substring(0, fileName.indexOf("."));
 			}
 			
-			int cell = 0;
-			for(int i = 0; i < lines.length; i++){
-				String line = lines[i];
-				if(line.startsWith("#")){
-					String[] data = line.substring(1).split(",");
-					int[] frame = new int[this.sheetSize * this.sheetSize];
-					
-					if(!usingCompresion){
-						for(int j = 0; j < data.length; j++){
-							String c = data[j].trim();
-							if(!usingHex){// Not HEX values
-								frame[j] = Integer.parseInt(c);
-							}else{
-								frame[j] = CompressionManager.decompress(c);
-							}
-							
-	
-							int dx = j % this.sheetSize;
-							int dy = j / this.sheetSize;
-							this.tiles[cell].setData(dx, dy, frame[j]);
-						}
-					}else{
-						this.tiles[cell].setData(CompressionManager.superDecompress(line));
-					}
-					cell++;
-				}
+			SpriteParser newFile = new SpriteParser(FileIO.instance.loadFile(sel.getAbsolutePath()));
+			Tile[] newTiles = new Tile[newFile.getNumCells()];
+			for(int i = 0; i < newFile.getNumCells(); i++){
+				Tile newTile = new Tile(newFile.getCellWidth());
+				newTile.setData(newFile.getData(i));
+				newTiles[i] = newTile;
 			}
+			
+			this.sv.setTileArray(newTiles);
+			this.tv.setTile(this.sv.getCurrentTile());
+			this.sheetSize = newFile.getCellWidth();
 		}
 		this.inputDelay = 30;
 	}
@@ -516,6 +462,7 @@ public class PaintScreen extends Screen {
 		try{
 		int off = 5;
 		for(int i = 0; i < this.letters.length; i++){
+			if(i > 6)off = 35;
 			int tx = (off + i) % 8;
 			int ty = (off + i) / 8;
 			this.letters[i] = this.sp.getData(tx, ty);
@@ -548,14 +495,7 @@ public class PaintScreen extends Screen {
 	}
 	
 	public void setColorIndex(int col){
-		int res = -1;
-		for(int i = 0; i < this.currentPallet.colors.length; i++){
-			if(this.currentPallet.colors[i] == col){
-				res = i;
-				return;
-			}
-		}
-		this.currentColorIndex = res;
+		this.currentColorIndex = col;
 	}
 	
 	private void initialise(){
@@ -565,20 +505,55 @@ public class PaintScreen extends Screen {
 		initCursor();
 	}
 	
+	private void chageSize(int nSize){
+		int[] wholeSheet = this.sv.getWholeSheet();
+		int numTiles = this.sv.w / nSize; // New tile size
+		int tileDrawSize = this.sv.w / numTiles; // The number of new tiles we want
+		Tile[] newTiles = new Tile[numTiles * numTiles];
+		for(int i = 0; i < newTiles.length; i++){
+			Tile newTile = new Tile(nSize);
+			int cx = i % numTiles;
+			int cy = i / numTiles;
+			
+			int nw = newTile.getWidth();
+			int[] d = new int[nw * nw];
+			for(int j = 0; j < d.length; j++){
+				int tx = j % nw;
+				int ty = j / nw;
+				
+				int wsx = (cx * tileDrawSize) + tx;
+				int wsy = (cy * tileDrawSize) + ty;
+				d[tx + ty * nw] = wholeSheet[wsx + wsy * this.sv.w];
+			}
+			newTile.setData(d);
+			newTiles[i] = newTile;
+		}
+		this.sv.setCurrentTile(0);
+		this.tiles = newTiles;
+	}
+	
 	private void pluginInit(){
+		PluginManager.instance.reload();
 		this.tools = new ArrayList<Tool>();
-		this.pluginManager = new PluginManager();
-		this.pluginManager.loadTools(this.tools);
+		PluginManager.instance.loadTools(this.tools, this);
 		this.currentTool = this.tools.get(0);
 		this.numTools = this.tools.size();
 	}
 	
 	public Tile getCurrentTile(){
-		return this.tiles[this.cTile];
+		return this.sv.getCurrentTile();
 	}
 	
 	public Pallet getPallet(){
 		return this.currentPallet;
+	}
+	
+	public int getCurrentColor(){
+		return getPallet().colors[this.currentColorIndex];
+	}
+	
+	public Tool getCurrentTool(){
+		return this.currentTool;
 	}
 
 }

@@ -7,10 +7,10 @@ public class Tile {
 	private int[] data;
 	private final int w;
 	
-	public Tile(int s){
-		this.w = s;
-		this.data = new int[s * s];
-		Arrays.fill(data, -1);
+	public Tile(int w){
+		this.w = w;
+		this.data = new int[w * w];
+		Arrays.fill(this.data, -1);
 	}
 	
 	public void setData(int x,int y, int c){
@@ -25,5 +25,9 @@ public class Tile {
 	
 	public int[] getData(){
 		return this.data;
+	}
+	
+	public int getWidth(){
+		return this.w;
 	}
 }

@@ -19,20 +19,13 @@ public class Painter extends Init{
 	private static int h = (w / 4) * 3;
 	private static int s = 3;
 	
-	public static final Version VER = new Version(1,0,0);
+	public static final Version VER = new Version(1,0,1).setBeta();
 	public Painter(){
 		super("FLS Painter " + VER.asString(), w * s, h * s);
 		useCustomBufferedImage(w, h, false);
 		setInput(new Input(this, Input.MOUSE));
 		setScreen(new PaintScreen());
 		skipInit();
-		
-		BufferedImage cursorImg = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-		// Create a new blank cursor.
-		Cursor blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(
-		    cursorImg, new Point(0, 0), "blank cursor");
-		// Set the blank cursor to the JFrame.
-		this.frame.getContentPane().setCursor(blankCursor);
 		
 		
 		int scale = 4;

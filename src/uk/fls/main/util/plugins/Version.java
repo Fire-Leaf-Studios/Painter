@@ -7,6 +7,9 @@ public class Version {
 	private int minor;
 	private int patch;
 	
+	private boolean beta;
+	private boolean alpha;
+	
 	public Version(int maj, int min, int pat){
 		this.major = maj;
 		this.minor = min;
@@ -16,7 +19,7 @@ public class Version {
 	public boolean isGreater(Version other){
 		if(this.major > other.major){
 			return true;
-		}else if(this.major < other.minor){
+		}else if(this.major < other.major){
 			return false;
 		}else{
 			if(this.minor > other.minor){
@@ -28,10 +31,35 @@ public class Version {
 					return true;
 				}else if(this.patch < other.patch){
 					return false;
+				}else{
+					if(this.beta && !other.beta){
+						return true;
+					}else if(!this.beta && other.beta){
+						return false;
+					}else{
+						if(this.alpha && !other.alpha){
+							return true;
+						}else if(!this.alpha && other.alpha){
+							return false;
+						}
+					}
 				}
-				return false;
 			}
 		}
+		
+		return false;
+	}
+	
+	public Version setBeta(){
+		this.beta = true;
+		this.alpha = false;
+		return this;
+	}
+	
+	public Version setAlpha(){
+		this.alpha = true;
+		this.beta = false;
+		return this;
 	}
 	
 	public boolean isLower(Version other){
@@ -79,6 +107,12 @@ public class Version {
 	}
 	
 	public String asString(){
-		return this.major + "." + this.minor + "." + this.patch;
+		String ending = "";
+		if(alpha){
+			ending = " - Alpha";
+		}else if(beta){
+			ending = " - Beta";
+		}
+		return this.major + "." + this.minor + "." + this.patch + ending;
 	}
 }
