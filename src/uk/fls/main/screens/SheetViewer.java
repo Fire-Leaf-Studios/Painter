@@ -82,6 +82,14 @@ public class SheetViewer {
 		return this.currentTile;
 	}
 	
+	public int getTileSize(){
+		return this.tileDrawSize;
+	}
+	
+	public int getTotalNumberOfTiles(){
+		return this.tiles.length;
+	}
+	
 	public int[] getWholeSheet(){
 		int[] res = new int[this.w * this.w];
 		for(int i = 0; i < this.tiles.length; i++){

@@ -24,6 +24,8 @@ public class PluginManager {
 	private List<Plugin> plugins;
 	private List<Plugin> validPlugins;
 	private List<File> pluginFiles;
+	
+	private List<FileOperations> savLodList;
 	private HashMap<String, PluginResource> infoFiles;
 	private Downloader dl;
 	
@@ -47,6 +49,7 @@ public class PluginManager {
 		this.validPlugins = new ArrayList<Plugin>();
 		this.pluginFiles = new ArrayList<File>();
 		this.infoFiles = new HashMap<String, PluginResource>();
+		this.savLodList = new ArrayList<FileOperations>();
 		File[] files = this.pluginsFolder.listFiles();
 		for(int i = 0; i < files.length; i++){// Looks for jars int the plugins directory
 			if(files[i].getName().endsWith(".jar")){// Found a potential plugin
@@ -57,14 +60,16 @@ public class PluginManager {
 		URL[] urls = new URL[this.pluginFiles.size()];
 		for(int i = 0; i < urls.length; i++){// Makes URLs of all the jars that we found
 			try {
-				urls[i] = this.pluginFiles.get(i).toURI().toURL();
+				String path = this.pluginFiles.get(i).getAbsolutePath();
+				urls[i] = new File(path).toURI().toURL();
 			} catch (MalformedURLException e) {
 				log("Error loading plugin file: " + this.pluginFiles.get(i));
+				e.printStackTrace();
 			}
 		}
 		
 		for(int i = 0; i < this.pluginFiles.size(); i++){// Looking for info files within jars for later
-				File f = new File(urls[i].getFile());
+				File f = this.pluginFiles.get(i);
 				this.infoFiles.put(this.pluginFiles.get(i).getName(), loadPluginResources(f));
 		}
 		
@@ -199,6 +204,14 @@ public class PluginManager {
 		System.out.printf("[Plugin Manager] " + s + "\n", values);
 	}
 	
+	private void err(String s){
+		System.err.println("[Plugin Manager] " + s);
+	}
+	
+	private void errf(String s, Object...values){
+		System.err.println("[Plugin Manager] " + s + "\n" + values);
+	}
+	
 	private PluginResource loadPluginResources(File f){
 		PluginResource pr = new PluginResource();
 		try(JarFile jar = new JarFile(f)){
@@ -221,8 +234,8 @@ public class PluginManager {
 			
 			entry = jar.getJarEntry(md.getSprites());
 			if(entry == null){
-				log("Couldn't find "+ md.getName() + "'s sprite resource: " + md.getSprites());
-				log("Skipng over this");
+				err("Couldn't find "+ md.getName() + "'s sprite resource: " + md.getSprites());
+				err("Skipng over this");
 			}else{
 				in = new BufferedReader(new InputStreamReader(jar.getInputStream(entry)));
 				l = "";
@@ -253,6 +266,42 @@ public class PluginManager {
 				tools.add(tool);
 			}
 		}
+	}
+	
+	public void loadFileManagers(){
+		for(int i = 0; i < this.validPlugins.size(); i++){
+			Plugin p = this.validPlugins.get(i);
+			if(p.getFileOps() == null)continue;
+			for(int j = 0; j < p.getFileOps().size(); j++){
+				FileOperations fo = p.getFileOps().get(j);
+				this.savLodList.add(fo);
+			}
+		}
+	}
+	
+	public String[] getFileManagerList(){
+		String[] res = new String[this.savLodList.size()];
+		for(int i = 0; i < this.savLodList.size(); i++){
+			res[i] = this.savLodList.get(i).getExt();
+		}
+		return res;
+	}
+	
+	public String[] getFileManagerDescList(){
+		String[] res = new String[this.savLodList.size()];
+		for(int i = 0; i < this.savLodList.size(); i++){
+			res[i] = this.savLodList.get(i).getDesc();
+		}
+		return res;
+	}
+	
+	public FileOperations getFileOperationsWithExtension(String ext){
+		for(int i = 0; i < this.savLodList.size(); i++){
+			if(this.savLodList.get(i).getExt().equals(ext)){
+				return this.savLodList.get(i);
+			}
+		}
+		return null;
 	}
 	
 	public void reload(){

@@ -1,9 +1,9 @@
 package uk.fls.main;
 
-import java.awt.Cursor;
-import java.awt.Point;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
+
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import fls.engine.main.Init;
 import fls.engine.main.input.Input;
@@ -19,13 +19,25 @@ public class Painter extends Init{
 	private static int h = (w / 4) * 3;
 	private static int s = 3;
 	
-	public static final Version VER = new Version(1,0,1).setBeta();
+	public static final Version VER = new Version(1,0,1);
 	public Painter(){
 		super("FLS Painter " + VER.asString(), w * s, h * s);
 		useCustomBufferedImage(w, h, false);
 		setInput(new Input(this, Input.MOUSE));
 		setScreen(new PaintScreen());
 		skipInit();
+		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (UnsupportedLookAndFeelException e) {
+			e.printStackTrace();
+		}
 		
 		
 		int scale = 4;
@@ -47,7 +59,7 @@ public class Painter extends Init{
 				res[fx + fy * (8 * scale)] = d[tx + ty * 8];
 			}
 		}
-		icon.setRGB(0, 0, 8 * scale, 8 * scale, res, 0, 8 * scale);
+		icon.setRGB(0, 0, sp.getCellWidth() * scale, sp.getCellWidth() * scale, res, 0, sp.getCellWidth() * scale);
 		this.frame.setIconImage(icon);
 	}
 	

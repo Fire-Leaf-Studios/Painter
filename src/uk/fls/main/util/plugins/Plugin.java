@@ -3,15 +3,13 @@ package uk.fls.main.util.plugins;
 import java.util.ArrayList;
 import java.util.List;
 
-import fls.engine.main.io.FileIO;
-import fls.engine.main.util.rendertools.SpriteParser;
-import uk.fls.main.Painter;
 import uk.fls.main.util.tools.Tool;
 
 public abstract class Plugin {
 	
 	private PluginResource resources;
 	private List<Tool> tools;
+	private List<FileOperations> fileOps;
 	
 	public MetaData getInfo(){
 		return this.resources.getInfo();
@@ -31,6 +29,12 @@ public abstract class Plugin {
 		this.tools.add(t);
 	}
 	
+	protected void addFileOperationsManager(FileOperations fo){
+		if(this.fileOps == null)this.fileOps = new ArrayList<FileOperations>();
+		fo.setPlugin(this);
+		this.fileOps.add(fo);
+	}
+	
 	public int[] getSpriteData(int x,int y){
 		if(this.resources.getIconData() == null)return new int[8 * 8];
 		return this.resources.getIconData() .getData(x, y);
@@ -38,6 +42,10 @@ public abstract class Plugin {
 	
 	public List<Tool> getTools(){
 		return this.tools;
+	}
+	
+	public List<FileOperations> getFileOps(){
+		return this.fileOps;
 	}
 	
 	public void log(String out){

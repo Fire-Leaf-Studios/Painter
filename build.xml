@@ -1,0 +1,50 @@
+<project name="Painter build" default="build" basedir=".">
+	
+	<property file="data.properties" prefix="data"/>
+	
+	<path id="classPath">
+		<fileset dir="lib">
+			<include name="**/*.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="clean">
+		<echo>Cleaning up the build env</echo>
+		<delete dir="build" />
+		<echo>Finished cleaning up the build env</echo>
+		<mkdir dir="build"/>
+		<echo>Created new build env</echo>
+	</target>
+
+	<target name="compile" depends="clean">
+		<echo>Compiling classes</echo>
+		<mkdir dir="build/classes"/>
+		<javac srcdir="src" destdir="build/classes" includeantruntime="false">
+			<classpath refid="classPath"/>
+		</javac>
+		<echo>Succesfully compliled classes</echo>
+	</target>
+	
+	<target name="build" depends="compile, incBuildNum">
+		<echo>Starting the packing process</echo>
+		<mkdir dir="build/jar"/>
+		<jar destfile="build/jar/${data.name}-Build-${data.build}.jar" basedir="build/classes" update="true">
+			<manifest>
+				<attribute name="Main-Class" value="${data.main}"/>
+			</manifest>
+			
+			<fileset dir="res"/><!-- Makes sure to include all of the files in ./res -->
+			
+			<zipfileset src="lib/Engine.jar"/>
+			
+			
+		</jar>
+		<echo>Finished?!</echo>
+	</target>
+	
+	<target name="incBuildNum" description="Increments the build number">
+		<propertyfile file="data.properties">
+			<entry key="build" default="1" type="int" operation="+"/>
+		</propertyfile>
+	</target>
+</project>

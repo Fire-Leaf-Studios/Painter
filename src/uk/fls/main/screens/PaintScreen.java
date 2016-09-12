@@ -13,8 +13,10 @@ import fls.engine.main.screen.Screen;
 import fls.engine.main.util.Point;
 import fls.engine.main.util.Renderer;
 import fls.engine.main.util.rendertools.SpriteParser;
+import uk.fls.main.util.ArtFilter;
 import uk.fls.main.util.Pallet;
 import uk.fls.main.util.Tile;
+import uk.fls.main.util.plugins.FileOperations;
 import uk.fls.main.util.plugins.PluginManager;
 import uk.fls.main.util.tools.Tool;
 
@@ -26,7 +28,6 @@ public class PaintScreen extends Screen {
 	private int cx, cy;
 	private int sheetSize;
 	private int tileSize;
-	private int cTile;
 	private Tile[] tiles;
 	private Pallet currentPallet;
 	private String font;
@@ -37,8 +38,6 @@ public class PaintScreen extends Screen {
 	
 	private int windowScale;
 	private String currentPos;
-	
-	private int currentVersion; // Value used in save files
 
 	private List<Tool> tools;
 	private Tool currentTool;
@@ -47,6 +46,8 @@ public class PaintScreen extends Screen {
 	
 	private TileViwer tv;
 	private SheetViewer sv;
+	
+	private int state = 1;
 	
 	public void postInit(){
 		this.r = new Renderer(this.game.getImage());
@@ -58,14 +59,12 @@ public class PaintScreen extends Screen {
 		for(int i = 0; i < this.tiles.length; i++){
 			this.tiles[i] = new Tile(nTiles);
 		}
-		this.cTile = 0;
 		this.currentPallet = Pallet.def;
 		this.currentColorIndex = 0;
 		this.windowScale = 3;
 		this.inputDelay = 10;
-		this.font = "SAVELOD-+0123456789";
+		this.font = "SAVELOD-+0123456789><";
 		this.letters = new int[this.font.length()][];
-		this.currentVersion = 4;
 		this.currentPos = new File("").getAbsolutePath();
 		
 		this.sp = new SpriteParser(8, FileIO.instance.readInternalFile("/gui.art"));
@@ -80,7 +79,6 @@ public class PaintScreen extends Screen {
 		if(this.game.hasFocus()){
 			if(this.inputDelay > 0){
 				this.inputDelay--;
-				return;
 			}
 			
 			this.cx = this.input.mouse.getX();
@@ -156,21 +154,22 @@ public class PaintScreen extends Screen {
 		int psbx = 14 * 8;
 		int psby = 11 * 8;
 		
-		
 		int firstSize = this.sheetSize;
-		if(mx > msbx && my > msby && mx < msbx + 8 && my < msby + 8){
-			if(this.input.leftMouseButton.justClicked()){
-				firstSize /= 2;
-				if(firstSize < 4)firstSize = 4;
-				this.inputDelay = 10;
+		if(this.inputDelay == 0){
+			if(mx > msbx && my > msby && mx < msbx + 8 && my < msby + 8){
+				if(this.input.leftMouseButton.justClicked()){
+					firstSize /= 2;
+					if(firstSize < 4)firstSize = 4;
+					this.inputDelay = 10;
+				}
 			}
-		}
-		
-		if(mx > psbx && my > psby && mx < psbx + 8 && my < psby + 8){
-			if(this.input.leftMouseButton.justClicked()){
-				firstSize *= 2;
-				if(firstSize > 32)firstSize = 32;
-				this.inputDelay = 10;
+			
+			if(mx > psbx && my > psby && mx < psbx + 8 && my < psby + 8){
+				if(this.input.leftMouseButton.justClicked()){
+					firstSize *= 2;
+					if(firstSize > 64)firstSize = 64;
+					this.inputDelay = 10;
+				}
 			}
 		}
 		
@@ -180,6 +179,20 @@ public class PaintScreen extends Screen {
 			this.tv.setTile(this.sv.getCurrentTile());
 			this.sheetSize = firstSize;
 		}
+		
+		if(this.input.leftMouseButton.justClicked() && this.inputDelay == 0){
+			if(my >= 8*11 && my <= 8*12){
+				if(mx >= 8 && mx <= 16){
+					this.state--;
+					if(this.state < 0)this.state = 0;
+					this.inputDelay = 10;
+				}else if(mx >= 8 * 23 && mx <= 8 * 24){
+					this.state++;
+					if(this.state > 2)this.state = 2;
+					this.inputDelay = 10;
+				}
+			}
+		}
 	}
 
 	@Override
@@ -187,22 +200,29 @@ public class PaintScreen extends Screen {
 		this.r.fill(this.r.makeRGB(123, 164, 255));
 		
 
-		drawTools();
-		//drawWholeSheet();
-
-		renderBorder(1,1,8,8);
-		this.sv.render(r);
 		
-		renderBorder(16,1,8,8);
-		this.tv.render(r);
-		
-		
-		renderBorder(1,14,23,4);
-		drawPallet();
-		drawButtons();
-		
-		drawCurrentSize();
-		drawCursor();
+		if(this.state == 1){
+			drawTools();
+			//drawWholeSheet();
+	
+			renderBorder(1,1,8,8);
+			this.sv.render(r);
+			
+			renderBorder(16,1,8,8);
+			this.tv.render(r);
+			
+			
+			renderBorder(1,14,23,4);
+			drawPallet();
+			drawButtons();
+			
+			drawCurrentSize();
+			drawCursor();
+		}else if(this.state == 0){
+			
+		}
+	
+		drawArrows();
 		
 		//this.r.finaliseRender();
 	}
@@ -220,7 +240,7 @@ public class PaintScreen extends Screen {
 		int xo = ((""+this.sheetSize).length() - 1) * 4;
 		renderString(""+this.sheetSize,8 * 12 - xo,8 * 11);
 
-		if(this.sheetSize < 32){
+		if(this.sheetSize < 64){
 			for(int i = 0; i < 8 * 8; i++){
 				int dx = i % 8;
 				int dy = i / 8;
@@ -266,6 +286,35 @@ public class PaintScreen extends Screen {
 		}
 	}
 	
+	private void drawArrows(){
+		for(int i = 0; i < 2; i++){
+			for(int j = 0; j < 8 * 8; j++){
+				
+				int cx = 8 + (j % 8) + (i * 8 * 22);
+				int cy = 8 * 11 + (j / 8);
+				if(i == 0){
+					if(this.state == 0){
+						continue;
+					}
+				}else if(i == 1){
+					if(this.state == 2){
+						continue;
+					}
+				}
+				this.r.setPixel(cx, cy, this.r.makeRGB(255,0,0));
+			}
+		}
+		
+		if(this.state == 1){
+			renderString("<", 8, 8 * 11);
+			renderString(">", 8 * 23, 8 * 11);
+		}else if(this.state == 2){
+			renderString("<", 8, 8 * 11);
+		}else{
+			renderString(">", 8 * 23, 8 * 11);
+		}
+	}
+	
 	private void drawTools(){
 		renderBorder(11, 2, 3, 6);
 		int xo = 11 * 8;
@@ -291,57 +340,16 @@ public class PaintScreen extends Screen {
 	
 	private void save(){
 		if(this.inputDelay > 0)return;
-		JFileChooser jfc = new JFileChooser(this.currentPos);
+		JFileChooser jfc = getSaveLoadDialog();
 		int out = jfc.showSaveDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
 			File file = jfc.getSelectedFile();
-			String output = "";
-			output += "?Version: " + this.currentVersion + "\n";
-			output += "?Size: " + this.sheetSize + "\n";
+
+			FileOperations fo = PluginManager.instance.getFileOperationsWithExtension(file.getName().substring(file.getName().lastIndexOf(".")));
 			
-			for(int i = 0; i < this.sv.tiles.length; i++){
-				String thisTile = "#";
-				int[] data = this.sv.tiles[i].getData();
-				int maxLength = this.sv.tiles[i].getWidth() * this.sv.tiles[i].getWidth();
-				int amt = 1;
-				for(int j = 0; j < data.length-1; j++){
-					int c = data[j];
-					int pc = data[j+1];
-					
-					if((j+1) == maxLength - 1){//Final pixel
-						boolean same = true;
-						if(c == pc)amt ++;
-						else same = false;
-						if(same){
-							if(amt > 1){
-								thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
-								amt = 1;
-							}else{
-								thisTile += (c==-1?-1:Integer.toHexString(c))+",";
-							}
-						}else{
-							thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
-							thisTile += (pc==-1?-1:Integer.toHexString(pc))+",";
-						}
-					}else{
-						if(c == pc){
-							amt++;
-							continue;
-						}else{
-							if(amt > 1){
-								thisTile += Integer.toHexString(amt) + ":" + (c==-1?-1:Integer.toHexString(c))+",";
-								amt = 1;
-							}else{
-								thisTile += (c==-1?-1:Integer.toHexString(c))+",";
-							}
-						}
-					}
-				}
-				thisTile = thisTile.substring(0,thisTile.length());
-				thisTile = thisTile.trim();
-				output += thisTile + "\n";
-			}
+			String output = "";
+			output = fo.save(sv);
 
 			boolean noEnding = file.getName().indexOf(".")==-1;
 			File newFile = new File((noEnding?file.getAbsolutePath()+".art":file.getAbsolutePath()));
@@ -358,7 +366,7 @@ public class PaintScreen extends Screen {
 	
 	private void load(){
 		if(this.inputDelay > 0)return;
-		JFileChooser jfc = new JFileChooser(this.currentPos);
+		JFileChooser jfc = getSaveLoadDialog();
 		int out = jfc.showOpenDialog(game);
 		
 		if(out == JFileChooser.APPROVE_OPTION){
@@ -367,26 +375,25 @@ public class PaintScreen extends Screen {
 			String fileName = sel.getName();
 			this.currentPos = sel.getParent();
 			if(fileName.indexOf(".") != -1){//Has extension
-				String ext = fileName.substring(fileName.indexOf(".") + 1);
+				String ext = fileName.substring(fileName.indexOf("."));
 				ext = ext.trim();
-				if(!ext.equals("art")){
-					System.err.println("Not a useable file type!!");
-					return;
+				Tile[] t = PluginManager.instance.getFileOperationsWithExtension(ext).load(FileIO.instance.loadFile(sel.getAbsolutePath()));
+				this.sv.setTileArray(t);
+				this.tv.setTile(this.sv.getCurrentTile());
+				this.sheetSize = PluginManager.instance.getFileOperationsWithExtension(ext).getLoadedSpriteSize();
+			}else{
+				SpriteParser newFile = new SpriteParser(FileIO.instance.loadFile(sel.getAbsolutePath()));
+				Tile[] newTiles = new Tile[newFile.getNumCells()];
+				for(int i = 0; i < newFile.getNumCells(); i++){
+					Tile newTile = new Tile(newFile.getCellWidth());
+					newTile.setData(newFile.getData(i));
+					newTiles[i] = newTile;
 				}
-				//fileName = fileName.substring(0, fileName.indexOf("."));
+				
+				this.sv.setTileArray(newTiles);
+				this.tv.setTile(this.sv.getCurrentTile());
+				this.sheetSize = newFile.getCellWidth();
 			}
-			
-			SpriteParser newFile = new SpriteParser(FileIO.instance.loadFile(sel.getAbsolutePath()));
-			Tile[] newTiles = new Tile[newFile.getNumCells()];
-			for(int i = 0; i < newFile.getNumCells(); i++){
-				Tile newTile = new Tile(newFile.getCellWidth());
-				newTile.setData(newFile.getData(i));
-				newTiles[i] = newTile;
-			}
-			
-			this.sv.setTileArray(newTiles);
-			this.tv.setTile(this.sv.getCurrentTile());
-			this.sheetSize = newFile.getCellWidth();
 		}
 		this.inputDelay = 30;
 	}
@@ -538,6 +545,7 @@ public class PaintScreen extends Screen {
 		PluginManager.instance.loadTools(this.tools, this);
 		this.currentTool = this.tools.get(0);
 		this.numTools = this.tools.size();
+		PluginManager.instance.loadFileManagers();
 	}
 	
 	public Tile getCurrentTile(){
@@ -554,6 +562,17 @@ public class PaintScreen extends Screen {
 	
 	public Tool getCurrentTool(){
 		return this.currentTool;
+	}
+	
+	private JFileChooser getSaveLoadDialog(){
+		JFileChooser jfc = new JFileChooser(this.currentPos);
+		jfc.setFileHidingEnabled(true);
+		jfc.setAcceptAllFileFilterUsed(false);
+		jfc.setFileHidingEnabled(true);
+		for(int i = 0; i < PluginManager.instance.getFileManagerList().length; i++){
+			jfc.addChoosableFileFilter(new ArtFilter(PluginManager.instance.getFileManagerList()[i], PluginManager.instance.getFileManagerDescList()[i]));
+		}
+		return jfc;
 	}
 
 }
