@@ -22,6 +22,11 @@ public class TileViwer {
 	
 	public void render(Renderer r){
 		int[] d = currentTile.getData();
+		
+		if(64 / scale <= 16){
+			drawLines(r);
+		}
+		
 		for(int i = 0; i < d.length; i++){
 			int cx = i % currentTile.getWidth();
 			int cy = i / currentTile.getWidth();
@@ -30,12 +35,17 @@ public class TileViwer {
 	}
 	
 	private void drawLargePixel(Renderer r, int x, int y, int c){
+		if(c == -1)return;
 		int cc = c == -1?(r.makeRGB(123, 164, 255) & 0xFEFEFE) >> 1:c;
 		for(int i = 0; i < this.scale * this.scale; i++){
 			int px = i % this.scale;
 			int py = i / this.scale;
 			r.setPixel(this.pos.getIX() + x * this.scale + px, this.pos.getIY() + y * this.scale + py, cc);
 		}
+	}
+	
+	private void drawLines(Renderer r){
+		
 	}
 	
 	public void update(Input in,PaintScreen ps, int mx, int my){

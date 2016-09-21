@@ -1,4 +1,6 @@
-package uk.fls.main.util;
+package uk.fls.main.util.pallet;
+
+import fls.engine.main.io.FileIO;
 
 public class Pallet {
 
@@ -66,34 +68,75 @@ public class Pallet {
 			0,252,252,
 			248,216,248,
 			0,0,0,
-			0,0,0
+			0,0,0,
+			123,123,123
 			);
 	public int[] colors;
 	
+	public final boolean valid;
+	
 	public Pallet(int...colors){
 		if(colors.length % 3 != 0)throw new RuntimeException("Invalid number of colors given");
-		int[] newColors = new int[colors.length / 3];
+		int numColors = 0;
+		int[] newColors = new int[64];
 		for(int i  = 0; i < colors.length; i+=3){
 			int r = colors[i];
 			int g = colors[i + 1];
 			int b = colors[i + 2];
 			int rgb = (r << 16) | (g << 8) | b;
 			newColors[i/3] = rgb;
+			numColors++;
+			if(numColors >= 64)break;
 		}
 		this.colors = newColors;
+		this.valid = true;
 	}
 	
 	//This constructor will load a bunch of CSV or in this case just look at the given array and convert them to "real" colours.
 	public Pallet(String...colors){
 		if(colors.length % 3 != 0)throw new RuntimeException("Invalid number of colors given");
-		int[] newColors = new int[colors.length / 3];
+		int numColors = 0;
+		int[] newColors = new int[64];
 		for(int i  = 0; i < colors.length; i+=3){
 			int r = Integer.parseInt(colors[i].trim());
 			int g = Integer.parseInt(colors[i + 1].trim());
 			int b = Integer.parseInt(colors[i + 2].trim());
 			int rgb = (r << 16) | (g << 8) | b;
 			newColors[i/3] = rgb;
+			numColors++;
+			if(numColors >= 64)break;
 		}
 		this.colors = newColors;
+		this.valid = true;
+	}
+	
+	/**
+	 * Converts hex values to required values
+	 * @param file
+	 */
+	public Pallet(String file){
+		String[] data = FileIO.instance.loadFile(file).split("\n");
+		int[] newColors = new int[64];
+		int numColors = 0;
+		for(int i = 0; i < data.length; i++){
+			if(data[i].startsWith(";"))continue;
+			newColors[numColors] = hexToInt(data[i]);
+			numColors++;
+			if(numColors >= 64)break;
+		}
+		this.colors = newColors;
+		this.valid = true;
+	}
+	
+	private int hexToInt(String line){
+		line = line.trim();
+		if(line.length() == 8){// Has alpha component
+			line = line.substring(2);
+		}
+		int r = Integer.parseInt(line.substring(0, 2), 16);
+		int g = Integer.parseInt(line.substring(2, 4), 16);
+		int b = Integer.parseInt(line.substring(4, 6), 16);
+		int rgb = (r << 16) | (g << 8) | b;
+		return rgb;
 	}
 }
