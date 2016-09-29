@@ -19,7 +19,7 @@ public class Painter extends Init{
 	private static int h = (w / 4) * 3;
 	private static int s = 3;
 	
-	public static final Version VER = new Version(1,0,1);
+	public static final Version VER = new Version(1,0,1).setAlpha();
 	public Painter(){
 		super("FLS Painter " + VER.asString(), w * s, h * s);
 		useCustomBufferedImage(w, h, false);

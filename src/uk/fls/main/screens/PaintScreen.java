@@ -265,6 +265,8 @@ public class PaintScreen extends Screen {
 				int cy = i / dx;
 				this.r.setPixel(cx + 80 + 40 + 8, cy + 16, rgb);
 			}
+			
+			r.setPixel(mx, my, 255);
 		}
 
 		drawArrows();
