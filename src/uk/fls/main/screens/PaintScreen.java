@@ -429,9 +429,11 @@ public class PaintScreen extends Screen {
 
 		if (out == JFileChooser.APPROVE_OPTION) {
 
+
 			File sel = jfc.getSelectedFile();
 			String fileName = sel.getName();
 			this.currentPos = sel.getParent();
+			/**
 			if (fileName.indexOf(".") != -1) {// Has extension
 				String ext = fileName.substring(fileName.indexOf("."));
 				ext = ext.trim();
@@ -441,18 +443,21 @@ public class PaintScreen extends Screen {
 				this.tv.setTile(this.sv.getCurrentTile());
 				this.sheetSize = PluginManager.instance.getFileOperationsWithExtension(ext).getLoadedSpriteSize();
 			} else {
-				SpriteParser newFile = new SpriteParser(FileIO.instance.loadFile(sel.getAbsolutePath()));
-				Tile[] newTiles = new Tile[newFile.getNumCells()];
-				for (int i = 0; i < newFile.getNumCells(); i++) {
-					Tile newTile = new Tile(newFile.getCellWidth());
-					newTile.setData(newFile.getData(i));
-					newTiles[i] = newTile;
-				}
-
-				this.sv.setTileArray(newTiles);
-				this.tv.setTile(this.sv.getCurrentTile());
-				this.sheetSize = newFile.getCellWidth();
+				
+			}**/
+			
+			SpriteParser newFile = new SpriteParser(FileIO.instance.loadFile(sel.getAbsolutePath()));
+			System.out.println(newFile.getCellWidth());
+			Tile[] newTiles = new Tile[newFile.getTotalNumCells()];
+			for (int i = 0; i < newTiles.length; i++) {
+				Tile newTile = new Tile(newFile.getCellWidth());
+				newTile.setData(newFile.getData(i));
+				newTiles[i] = newTile;
 			}
+
+			this.sv.setTileArray(newTiles);
+			this.tv.setTile(this.sv.getCurrentTile());
+			this.sheetSize = newFile.getCellWidth();
 		}
 		this.inputDelay = 30;
 	}
